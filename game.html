@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width">
+    <title>JS Bin</title>
+    <script src="https://code.jquery.com/jquery-1.11.3.js"></script>
+    <style type="text/css">
+        body {
+            background-color: #d2d7d3;
+        }
+        .board, .msg {
+            margin: 0 auto;
+            margin-top: 60px;
+            width: 80%;
+            max-width: 800px;
+        }
+        .board {
+            position: relative;
+            background-color: #fde3a7;
+            perspective: 500px;
+        }
+        @media (max-width: 600px) {
+            .board {
+                width: 90%;
+            }
+        }
+        .cell {
+            width: 22%;
+            margin: 1.5%;
+            float: left;
+            background-color: #4ecdc4;
+            cursor: pointer;
+            text-align: center;
+            transition: transform .8s;
+            transform-style: preserve-3d;
+        }
+        .cell:hover {
+            box-shadow: 2px 2px 0 #1ba39c;
+        //transform: rotateY(180deg)
+        }
+        .MM{
+            transform: rotateY(180deg)
+        }
+        .player1 > div {
+            float: right;
+        }
+        .player2 > div {
+            float: left;
+        }
+        .overlay_win {
+            position: absolute;
+            top: 25vmin;
+            left: 0;
+            height: 40vmin;
+            width: 100%;
+            text-align: center;
+        }
+        .overlay_win {
+            background-color: #b00;
+        }
+
+        .overlay_win h2 {
+            font-size: 10vmin;
+            font-weight: 500;
+            line-height: 10vmin;
+            margin: 5vmin 0px;
+            color: #fff;
+            font-family: 'Microsoft YaHei','Lantinghei SC','Open Sans',Arial,'Hiragino Sans GB','STHeiti','WenQuanYi Micro Hei','SimSun',sans-serif;
+        }
+
+        #replay {
+            font-size: 7vmin;
+            display: inline-block;
+            border-radius: 1vmin;
+            padding: 2vmin 4vmin;
+            font-family: 'Microsoft YaHei','Lantinghei SC','Open Sans',Arial,'Hiragino Sans GB','STHeiti','WenQuanYi Micro Hei','SimSun',sans-serif;
+            cursor: pointer;
+        }
+
+        #replay {
+            background-color: #112;
+            color: #b00;
+        }
+
+        #replay:hover {
+            color: #e00;
+        }
+
+        .overlay_win {
+            opacity: 0;
+            transition: opacity 0.4s;
+            pointer-events: none;
+        }
+        .overlay_win_open {
+            opacity: 0.9;
+            transition: opacity 0.4s;
+            pointer-events: auto;
+        }
+    </style>
+        <script type="text/javascript">
+            var A = cipai(); //洗牌
+            var B = [ , , , , , , , , , , , , , , , ];//儲存已配對之牌
+            var first = null;//儲存第一張翻開的牌
+            var second = null;//儲存第二張翻開的牌
+
+            function cipai() {
+                var j;
+                var t;
+
+                var A = [
+                    '&spades;',
+                    '&spades;',
+                    '&spades;',
+                    '&spades;',
+                    '&clubs;',
+                    '&clubs;',
+                    '&clubs;',
+                    '&clubs;',
+                    '&hearts;',
+                    '&hearts;',
+                    '&hearts;',
+                    '&hearts;',
+                    '&diams;',
+                    '&diams;',
+                    '&diams;',
+                    '&diams;'
+                ];
+
+                for (i = 0; i < 16; i++) {
+                    j = Math.floor(Math.random() * (i + 1));
+                    t = A[i];
+                    A[i] = A[j];
+                    A[j] = t;
+                }
+                console.log(A);
+                return A;
+            }
+            //添加翻牌特效
+            function toggleM(i){
+                var mv = document.getElementById("tile_"+i);
+                mv.classList.toggle("MM");
+            }
+            //檢查第一張與第二張之狀態
+            function checkBetween(ft,sd){
+                //若有牌已被配對成功則返回
+                if((B[ft]==-1)||(B[sd]==-1)){
+                    geipai(ft,sd);
+                    first = null;
+                    second = null;
+                    return;
+                }
+                //若圖形不同則返回，相同則成功配對設B[]為-1
+                if(A[ft] != A[sd]){
+                    geipai(ft,sd);
+                    first = null;
+                    second = null;
+                    return;
+                }else{
+                    B[ft] = -1;
+                    B[sd] = -1;
+                    first = null;
+                    second = null;
+                }
+                //每點選一次就檢查是否遊戲結束
+                checkSuccess();
+            }
+            //利用innerHTML控制內容為空白
+            function geipai(ft,sd){
+                var cellelem = document.querySelectorAll('.cell');
+                setTimeout(function() {
+                    cellelem[ft].innerHTML="";
+                    cellelem[sd].innerHTML="";
+                }, 1000);
+            }
+            //添加CSS
+            function add_class(id, cl) {
+                var elem = document.getElementById(id);
+                if (elem.classList.contains(cl) !== true) {
+                    elem.classList.add(cl);
+                }
+            }
+            //迴圈檢查B[]是否完成，完成就Show出overlay_win
+            function checkSuccess(){
+                for(var i=0;i<16;i++){
+                    if(B[i]!=-1)
+                        return;
+                }
+                add_class("overlay_win", "overlay_win_open");
+            }
+            $(function() {
+                var cells = $('.cell');
+                var winResizeHandler = function() {
+                    var c = cells;
+                    var w = c.width();
+                    c
+                        .css({
+                            'line-height': w * 0.92 + 'px',
+                            'font-size': w + 'px'
+                        })
+                        .height(w);
+                };
+                $(window)
+                    .resize(winResizeHandler)
+                    .keydown(function(e) {
+                        e.preventDefault();
+                        initGame();
+                    });
+                winResizeHandler();
+
+                cells.click(function() {
+                    var $this = $(this);
+                    var i = $this.data('i');
+                    setTimeout(function() {
+                        $this.append(A[i]);
+                    }, 300);
+                    if(first == null){
+                        first = i;
+                    }else{
+                        second = i;
+                    }
+                    if(first != second){
+                        if((first==null)||(second == null)){
+                            return;
+                        }
+                        else{
+                            checkBetween(first,second,$this);
+                        }
+                    }else{
+                        first = null;
+                        second = null;
+                    }
+                })
+            });
+            function reset() {
+                location.reload();
+            }
+        </script>
+</head>
+<body>
+<div class="board">
+    <div class="tile_container">
+        <div id="tile_0" class="cell"onclick="toggleM(0);" data-i="0">
+            <i id="tile_icon_0" class="fa"></i>
+        </div>
+
+        <div id="tile_1" class="cell" onclick="toggleM(1);"data-i="1">
+            <i id="tile_icon_1" class="fa"></i>
+        </div>
+
+        <div id="tile_2" class="cell" onclick="toggleM(2);"data-i="2">
+            <i id="tile_icon_2" class="fa"></i>
+        </div>
+
+        <div id="tile_3" class="cell"onclick="toggleM(3);"data-i="3">
+            <i id="tile_icon_3" class="fa"></i>
+        </div>
+
+        <div id="tile_4" class="cell"onclick="toggleM(4);"data-i="4">
+            <i id="tile_icon_4" class="fa"></i>
+        </div>
+
+        <div id="tile_5" class="cell" onclick="toggleM(5);"data-i="5">
+            <i id="tile_icon_5" class="fa"></i>
+        </div>
+
+        <div id="tile_6" class="cell" onclick="toggleM(6);"data-i="6">
+            <i id="tile_icon_6" class="fa"></i>
+        </div>
+
+        <div id="tile_7" class="cell" onclick="toggleM(7);"data-i="7">
+            <i id="tile_icon_7" class="fa"></i>
+        </div>
+
+        <div id="tile_8" class="cell" onclick="toggleM(8);"data-i="8">
+            <i id="tile_icon_8" class="fa"></i>
+        </div>
+
+        <div id="tile_9" class="cell" onclick="toggleM(9);"data-i="9">
+            <i id="tile_icon_9" class="fa"></i>
+        </div>
+
+        <div id="tile_10" class="cell" onclick="toggleM(10);"data-i="10">
+            <i id="tile_icon_10" class="fa"></i>
+        </div>
+
+        <div id="tile_11" class="cell" onclick="toggleM(11);"data-i="11">
+            <i id="tile_icon_11" class="fa"></i>
+        </div>
+
+        <div id="tile_12" class="cell" onclick="toggleM(12);"data-i="12">
+            <i id="tile_icon_12" class="fa"></i>
+        </div>
+
+        <div id="tile_13" class="cell" onclick="toggleM(13);"data-i="13">
+            <i id="tile_icon_13" class="fa"></i>
+        </div>
+
+        <div id="tile_14" class="cell" onclick="toggleM(14);"data-i="14">
+            <i id="tile_icon_14" class="fa"></i>
+        </div>
+
+        <div id="tile_15" class="cell" onclick="toggleM(15);"data-i="15">
+            <i id="tile_icon_15" class="fa"></i>
+        </div>
+        <div style="clear: both;"></div>
+    </div>
+</div>
+
+<div class="overlay_win" id="overlay_win">
+    <h2>恭喜，你赢了！</h2>
+    <div id="replay"onclick="reset();">再玩一次</div>
+</div>
+</body>
+</html>
